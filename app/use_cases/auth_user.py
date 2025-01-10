@@ -1,13 +1,10 @@
-from datetime import date, datetime, timedelta, timezone
-from hashlib import algorithms_available
-from math import log
-from os import access
+from datetime import datetime, timedelta, timezone
 
 from decouple import config
 from fastapi import status
 from fastapi.exceptions import HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
 from jose import jwt, JWTError
-from jose.constants import ALGORITHMS
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
@@ -36,18 +33,21 @@ class UserUseCases:
         try:
             self.db_session.add(user_model)
             self.db_session.commit()
+            self.db_session.refresh(user_model)
+            return user_model
+
         except IntegrityError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail='Usuário já existe'
             )
 
-    def user_login(self, login_req: LoginRequest, expires_in_minutes: int = 30):
+    def user_login(self, login_form: OAuth2PasswordRequestForm, expires_in_minutes: int = 30):
 
         # busca por username
         user_on_db = (
             self.db_session.query(UserModel)
-            .filter((UserModel.username == login_req.credencial) | (UserModel.email == login_req.credencial))
+            .filter((UserModel.username == login_form.username) | (UserModel.email == login_form.username))
             .first()
         )
 
@@ -58,7 +58,7 @@ class UserUseCases:
             )
 
 
-        if not crypto_context.verify(login_req.senha, user_on_db.senha):
+        if not crypto_context.verify(login_form.password, user_on_db.senha):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail='Nome de usuário ou senha inválidos'
