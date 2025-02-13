@@ -57,3 +57,7 @@ docs/_build/
 
 # pylint
 .pylintrc
+
+
+# emacs
+.dir-locals.el
