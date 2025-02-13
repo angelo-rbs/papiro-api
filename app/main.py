@@ -15,14 +15,3 @@ app.include_router(auth_router)
 @app.get("/")
 def health_check():
     return "server running"
-
-
-# @app.exception_handler(RequestValidationError)
-# async def validation_exception_handler(
-#     _: Request, ex: RequestValidationError
-# ) -> JSONResponse:
-#     """Handler global para capturar erros de validação do Pydantic"""
-#     return JSONResponse(
-#         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-#         content={"mensagem": "Erro de validação", "detalhes": ex.errors()},
-#     )
