@@ -13,9 +13,10 @@ from app.db.models import UserModel
 from app.schemas.auth_schema import LoginRequest, TokenResponse
 from app.schemas.user_schema import User
 
-crypto_context = CryptContext(schemes=['sha256_crypt'])
-SECRET_KEY = config('SECRET_KEY')
-ALGORITHM = config('ALGORITHM')
+crypto_context = CryptContext(schemes=["sha256_crypt"])
+SECRET_KEY = config("SECRET_KEY")
+ALGORITHM = config("ALGORITHM")
+
 
 class UserUseCases:
     def __init__(self, db_session: Session):
@@ -27,8 +28,6 @@ class UserUseCases:
             username=user.username,
             email=user.email,
             senha=crypto_context.hash(user.senha),
-            criadoEm=user.criadoEm,
-            ativo=user.ativo
         )
         try:
             self.db_session.add(user_model)
@@ -38,30 +37,32 @@ class UserUseCases:
 
         except IntegrityError:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail='Usuário já existe'
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Usuário já existe"
             )
 
-    def user_login(self, login_form: OAuth2PasswordRequestForm, expires_in_minutes: int = 30):
-
+    def user_login(
+        self, login_form: OAuth2PasswordRequestForm, expires_in_minutes: int = 30
+    ):
         # busca por username
         user_on_db = (
             self.db_session.query(UserModel)
-            .filter((UserModel.username == login_form.username) | (UserModel.email == login_form.username))
+            .filter(
+                (UserModel.username == login_form.username)
+                | (UserModel.email == login_form.username)
+            )
             .first()
         )
 
         if user_on_db is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail='Nome de usuário ou senha inválidos'
+                detail="Nome de usuário ou senha inválidos",
             )
-
 
         if not crypto_context.verify(login_form.password, user_on_db.senha):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail='Nome de usuário ou senha inválidos'
+                detail="Nome de usuário ou senha inválidos",
             )
 
         return self.__criar_token_acesso(user_on_db, expires_in_minutes)
@@ -69,20 +70,13 @@ class UserUseCases:
     def __criar_token_acesso(self, user: UserModel, duration_in_minutes: int):
         exp = datetime.now(timezone.utc) + timedelta(minutes=duration_in_minutes)
 
-        payload = {
-            'sub': user.username,
-            'exp': exp.isoformat()
-        }
+        payload = {"sub": user.username, "exp": exp.isoformat()}
 
         access_token = jwt.encode(payload, key=SECRET_KEY, algorithm=ALGORITHM)
 
         return TokenResponse(
-            token_acesso=access_token,
-            expira_em=exp.isoformat(), 
-            tipo_token='Bearer'
-        ) 
+            token_acesso=access_token, expira_em=exp.isoformat(), tipo_token="Bearer"
+        )
 
     def user_get_all(self):
         return self.db_session.query(UserModel).all()
-
-    
